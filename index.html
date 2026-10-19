@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>電話簿</title>
+<style>
+:root{
+  --bg:#f2f4f7;--surface:#fff;--ink:#14202b;--muted:#5d6b79;--line:#dde2e8;
+  --accent:#0b5cad;--on-accent:#fff;--call:#17794f;--call-bg:#e1f2e9;--err:#b3261e;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei","微軟正黑體",system-ui,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10161c;--surface:#18212a;--ink:#e8edf2;--muted:#93a1af;--line:#2a3541;--accent:#6db0f5;--on-accent:#08111a;--call:#6fd9a8;--call-bg:#16342a;--err:#ff9b94}
+}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);line-height:1.45;min-height:100vh}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
+.bar-in{max-width:720px;margin:0 auto}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+h1{font-size:1.15rem;font-weight:800;letter-spacing:.06em}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-size:.9rem;font-weight:700;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.msg{font-size:.85rem;color:var(--muted);margin-bottom:8px}
+.msg.err{color:var(--err)}
+.sel{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-bottom:8px}
+select,input{width:100%;height:46px;font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 12px}
+select{-webkit-appearance:none;appearance:none;padding-right:32px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.85rem;color:var(--muted);min-height:28px}
+.clear{font:inherit;font-size:.85rem;font-weight:700;color:var(--accent);background:none;border:0;padding:4px 0 4px 12px;cursor:pointer}
+
+main{max-width:720px;margin:0 auto;padding:0 14px calc(40px + env(safe-area-inset-bottom,0px))}
+.grp h2{display:flex;justify-content:space-between;align-items:baseline;font-size:.98rem;font-weight:800;color:var(--accent);padding:20px 2px 6px;border-bottom:2px solid var(--accent)}
+.grp h2 span{font-size:.85rem;font-weight:500;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.who{min-width:0}
+.who b{display:block;font-size:1.1rem;font-weight:700;overflow-wrap:anywhere}
+.who span{font-size:.85rem;color:var(--muted)}
+.who .tag{margin-right:8px;font-weight:700;color:var(--accent)}
+.call{flex:none;display:inline-flex;align-items:center;min-height:46px;padding:0 14px;border-radius:8px;background:var(--call-bg);color:var(--call);font-size:1.05rem;font-weight:800;letter-spacing:.03em;text-decoration:none;font-variant-numeric:tabular-nums}
+.call:active{filter:brightness(.9)}
+.empty{padding:48px 8px;text-align:center;color:var(--muted)}
+.stamp{font-size:.78rem;color:var(--muted);margin-top:2px}
+.dlg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+.dlg .box{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.dlg h2{font-size:1.05rem;font-weight:800;margin-bottom:12px}
+.dlg input{margin-bottom:10px}
+.dlg .err{min-height:1.2em;font-size:.85rem;color:var(--err);margin-bottom:8px}
+.dlg .acts{display:flex;justify-content:flex-end;gap:8px}
+</style>
+</head>
+<body>
+<header class="bar"><div class="bar-in">
+  <div class="top">
+    <div><h1>電話簿</h1><div class="stamp" id="stamp" hidden></div></div>
+    <div class="btns">
+      <button class="btn" id="imp">匯入檔案</button>
+    </div>
+  </div>
+  <input type="file" id="file" accept=".xlsx,.xlsm,.csv" hidden>
+  <div class="msg" id="msg" hidden></div>
+  <div class="sel">
+    <select id="g" aria-label="股別"></select>
+    <select id="x" aria-label="交換局"></select>
+  </div>
+  <input id="q" type="search" placeholder="輸入姓名關鍵字(也可搜電話)" aria-label="姓名關鍵字" autocomplete="off" enterkeyhint="search">
+  <div class="meta"><span id="count"></span><button class="clear" id="clr" hidden>清除篩選</button></div>
+</div></header>
+<main id="list"></main>
+
+<div class="dlg" id="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="dlgtitle">
+  <div class="box">
+    <h2 id="dlgtitle"></h2>
+    <input type="password" id="pw1" placeholder="密碼" autocomplete="off">
+    <div id="pw2wrap"><input type="password" id="pw2" placeholder="再輸入一次密碼" autocomplete="off"></div>
+    <div class="err" id="pwerr"></div>
+    <div class="acts"><button class="btn ghost" id="pwcancel">取消</button><button class="btn" id="pwok">確定</button></div>
+  </div>
+</div>
+
+<script id="data">var DATA=[];</script>
+<script>
+/* ===================================================================
+   內建讀檔(不依賴任何外部函式庫、不連網)
+   支援 .xlsx / .xlsm(用瀏覽器內建的 DecompressionStream 解壓)與 .csv
+   =================================================================== */
+var LocalReader=(function(){
+  var RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  var td=new TextDecoder('utf-8');
+  function u16(d,o){return d[o]|(d[o+1]<<8)}
+  function u32(d,o){return (d[o]|(d[o+1]<<8)|(d[o+2]<<16)|(d[o+3]<<24))>>>0}
+  function tags(n,name){return n.getElementsByTagNameNS('*',name)}
+  function unesc(s){return s.indexOf('_x')<0?s:s.replace(/_x([0-9A-Fa-f]{4})_/g,function(m,h){return String.fromCharCode(parseInt(h,16))})}
+
+  /* ---------- ZIP ---------- */
+  async function inflate(u8){
+    if(typeof DecompressionStream==='undefined')throw new Error('這個瀏覽器太舊,不支援內建解壓縮,請改用新版的 Chrome 或 Edge');
+    var s=new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+  function listZip(d){
+    var e=-1;
+    for(var i=d.length-22;i>=Math.max(0,d.length-22-65535);i--){if(u32(d,i)===0x06054b50){e=i;break}}
+    if(e<0)throw new Error('不是有效的 xlsx 檔(找不到 ZIP 結構)');
+    var n=u16(d,e+10),p=u32(d,e+16),files={};
+    for(var k=0;k<n;k++){
+      if(u32(d,p)!==0x02014b50)break;
+      var nl=u16(d,p+28),el=u16(d,p+30),cl=u16(d,p+32);
+      files[td.decode(d.subarray(p+46,p+46+nl))]={method:u16(d,p+10),csize:u32(d,p+20),off:u32(d,p+42)};
+      p+=46+nl+el+cl;
+    }
+    return files;
+  }
+  async function readEntry(d,files,name){
+    var f=files[name];if(!f)return null;
+    var o=f.off;if(u32(d,o)!==0x04034b50)throw new Error('ZIP 檔案毀損');
+    var s=o+30+u16(d,o+26)+u16(d,o+28),raw=d.subarray(s,s+f.csize);
+    if(f.method===0)return raw;
+    if(f.method===8)return inflate(raw);
+    throw new Error('不支援的壓縮方式');
+  }
+  function resolve(t){
+    if(t.charAt(0)==='/')return t.slice(1);
+    var o=[];('xl/'+t).split('/').forEach(function(p){if(p==='..')o.pop();else if(p&&p!=='.')o.push(p)});
+    return o.join('/');
+  }
+  function parseXmlText(text){
+    var doc=new DOMParser().parseFromString(text,'application/xml');
+    if(doc.getElementsByTagName('parsererror').length)throw new Error('XML 解析失敗,檔案可能毀損');
+    return doc;
+  }
+  function parseXml(u8){return parseXmlText(td.decode(u8))}
+
+  /* ---------- 字串 / 日期 ---------- */
+  function textOf(el){
+    var out='',ts=tags(el,'t');
+    for(var i=0;i<ts.length;i++){var par=ts[i].parentNode;if(par&&par.localName==='rPh')continue;out+=ts[i].textContent}
+    return unesc(out);
+  }
+  function isDateFmt(id,code){
+    if(code==null)return (id>=14&&id<=22)||(id>=27&&id<=36)||(id>=45&&id<=47)||(id>=50&&id<=58);
+    var c=code.replace(/"[^"]*"/g,'').replace(/\\./g,'').replace(/\[(?![hms]+\])[^\]]*\]/gi,'');
+    return /[ymdhs]/i.test(c);
+  }
+  function dateStyles(doc){
+    var fm={},res=[],nf=tags(doc,'numFmt');
+    for(var i=0;i<nf.length;i++)fm[nf[i].getAttribute('numFmtId')]=nf[i].getAttribute('formatCode');
+    var cx=tags(doc,'cellXfs')[0];if(!cx)return res;
+    for(var j=0;j<cx.childNodes.length;j++){
+      var x=cx.childNodes[j];if(x.localName!=='xf')continue;
+      var id=x.getAttribute('numFmtId');res.push(isDateFmt(+id,fm[id]));
+    }
+    return res;
+  }
+  function p2(n){return n<10?'0'+n:''+n}
+  function fmtDate(v,d1904){
+    if(!(v>=0&&v<2958466))return String(v);
+    var t=Math.round(v*86400),day=Math.floor(t/86400),sec=t-day*86400;
+    var hh=Math.floor(sec/3600),mi=Math.floor(sec%3600/60),ss=sec%60;
+    var tm=p2(hh)+':'+p2(mi)+(ss?':'+p2(ss):'');
+    if(day===0&&!d1904)return tm;
+    var ud=d1904?day-24107:(day<61?day-25568:day-25569),D=new Date(ud*86400000);
+    var ds=D.getUTCFullYear()+'/'+p2(D.getUTCMonth()+1)+'/'+p2(D.getUTCDate());
+    return sec?ds+' '+tm:ds;
+  }
+
+  /* ---------- 工作表 ---------- */
+  function colIdx(ref){var m=/^([A-Z]+)/.exec(ref),n=0;if(!m)return 0;for(var i=0;i<m[1].length;i++)n=n*26+m[1].charCodeAt(i)-64;return n-1}
+  function cellValue(c,ctx){
+    var t=c.getAttribute('t'),vn=tags(c,'v')[0],v=vn?vn.textContent:'';
+    if(t==='inlineStr'){var is=tags(c,'is')[0];return is?textOf(is):''}
+    if(v==='')return '';
+    if(t==='s'){var s=ctx.ss[+v];return s==null?'':s}
+    if(t==='str')return unesc(v);
+    if(t==='b')return v==='1'?'TRUE':'FALSE';
+    if(t==='e')return v;
+    if(t==='d')return v.replace('T',' ').replace(/ 00:00:00(\.0+)?Z?$/,'');
+    var n=parseFloat(v);if(isNaN(n))return v;
+    if(ctx.dateXf[+c.getAttribute('s')||0])return fmtDate(n,ctx.d1904);
+    return n;
+  }
+  function parseSheet(text,ctx,limit){
+    var re=/<((?:\w+:)?)row[\s>\/]/g,cnt=0,m;
+    while((m=re.exec(text))){
+      if(++cnt>limit){text=text.slice(0,m.index)+'</'+m[1]+'sheetData></'+m[1]+'worksheet>';break}
+    }
+    var doc=parseXmlText(text);
+    var grid=[],minR=1e9,minC=1e9,maxR=-1,maxC=-1,rows=tags(doc,'row'),sr=0;
+    for(var i=0;i<rows.length;i++){
+      var ra=rows[i].getAttribute('r'),ri=ra?(+ra-1):sr;sr=ri+1;
+      var cells=tags(rows[i],'c'),sc=0;
+      for(var j=0;j<cells.length;j++){
+        var ref=cells[j].getAttribute('r'),ci=ref?colIdx(ref):sc;sc=ci+1;
+        var val=cellValue(cells[j],ctx);
+        if(val===''||val==null)continue;
+        (grid[ri]||(grid[ri]=[]))[ci]=val;
+        if(ri<minR)minR=ri;if(ri>maxR)maxR=ri;if(ci<minC)minC=ci;if(ci>maxC)maxC=ci;
+      }
+    }
+    var out=[];
+    for(var r=minR;r<=maxR&&out.length<limit;r++){
+      var src=grid[r]||[],row=[];
+      for(var c=minC;c<=maxC;c++)row.push(src[c]===undefined?'':src[c]);
+      out.push(row);
+    }
+    return out;
+  }
+
+  /* ---------- xlsx / xlsm ---------- */
+  /* 檔頭是 OLE(D0 CF 11 E0)代表不是一般 xlsx:可能是加密檔,也可能是舊版 .xls */
+  function has16(d,s){
+    var n=s.length,c0=s.charCodeAt(0);
+    for(var i=0;i+2*n<=d.length;i++){
+      if(d[i]!==c0||d[i+1]!==0)continue;
+      var k=1;while(k<n&&d[i+2*k]===s.charCodeAt(k)&&d[i+2*k+1]===0)k++;
+      if(k===n)return true;
+    }
+    return false;
+  }
+  function oleHint(d){
+    if(has16(d,'EncryptedPackage'))return '這個 .xlsx 有加密(密碼保護,或公司的「敏感度標籤/權限保護」),網頁無法直接讀取。請先在 Excel 開啟並移除密碼或保護,或把內容複製到新的活頁簿,另存成新的 .xlsx 再匯入。';
+    return '這個檔案實際是舊版 .xls 格式(副檔名改成 .xlsx 也一樣),本工具不支援。請用 Excel 開啟後「另存新檔」,類型選「Excel 活頁簿 (*.xlsx)」再匯入。';
+  }
+  async function readXlsx(buf,limit){
+    var d=new Uint8Array(buf);
+    if(u32(d,0)===0xE011CFD0)throw new Error(oleHint(d));
+    if(!(d[0]===0x50&&d[1]===0x4B))throw new Error('不是有效的 xlsx 檔');
+    var files=listZip(d);
+    var wbB=await readEntry(d,files,'xl/workbook.xml');
+    if(!wbB)throw new Error('找不到活頁簿資料(xl/workbook.xml),這不是 Excel 檔');
+    var wb=parseXml(wbB),rel={},relB=await readEntry(d,files,'xl/_rels/workbook.xml.rels');
+    if(relB){var rs=tags(parseXml(relB),'Relationship');for(var i=0;i<rs.length;i++)rel[rs[i].getAttribute('Id')]={t:rs[i].getAttribute('Target')||'',y:rs[i].getAttribute('Type')||''}}
+    function byType(sfx,dflt){for(var k in rel)if(rel[k].y.slice(-sfx.length)===sfx)return resolve(rel[k].t);return dflt}
+    var ss=[],ssB=await readEntry(d,files,byType('/sharedStrings','xl/sharedStrings.xml'));
+    if(ssB){var sis=tags(parseXml(ssB),'si');for(var a=0;a<sis.length;a++)ss.push(textOf(sis[a]))}
+    var stB=await readEntry(d,files,byType('/styles','xl/styles.xml'));
+    var pr=tags(wb,'workbookPr')[0];
+    var ctx={ss:ss,dateXf:stB?dateStyles(parseXml(stB)):[],d1904:!!(pr&&/^(1|true)$/i.test(pr.getAttribute('date1904')||''))};
+    var sheets=[],sh=tags(wb,'sheet');
+    for(var b=0;b<sh.length;b++){
+      var rid=sh[b].getAttributeNS(RNS,'id')||sh[b].getAttribute('r:id'),r=rel[rid];
+      if(!r||/chartsheet|dialogsheet|macrosheet/i.test(r.y+r.t))continue;
+      var bytes=await readEntry(d,files,resolve(r.t));
+      sheets.push({name:sh[b].getAttribute('name')||('Sheet'+(b+1)),rows:bytes?parseSheet(td.decode(bytes),ctx,limit):[]});
+    }
+    if(!sheets.length)throw new Error('檔案中找不到任何工作表');
+    return sheets;
+  }
+
+  /* ---------- csv ---------- */
+  function decodeText(buf){
+    var u=new Uint8Array(buf);
+    try{return new TextDecoder('utf-8',{fatal:true}).decode(u)}
+    catch(e){try{return new TextDecoder('big5').decode(u)}catch(e2){return td.decode(u)}}
+  }
+  function csvVal(s){return /^-?(0|[1-9]\d{0,14})(\.\d+)?$/.test(s)?Number(s):s}
+  function parseCsv(text,limit){
+    text=text.replace(/^\uFEFF/,'');
+    var first=text.split(/\r?\n/,1)[0]||'',delim=',',best=first.split(',').length;
+    ['\t',';'].forEach(function(c){var n=first.split(c).length;if(n>best){best=n;delim=c}});
+    var rows=[],row=[],f='',q=false,n=text.length;
+    for(var i=0;i<n&&rows.length<limit;i++){
+      var ch=text.charAt(i);
+      if(q){if(ch==='"'){if(text.charAt(i+1)==='"'){f+='"';i++}else q=false}else f+=ch}
+      else if(ch==='"'&&f==='')q=true;
+      else if(ch===delim){row.push(csvVal(f));f=''}
+      else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text.charAt(i+1)==='\n')i++;row.push(csvVal(f));f='';rows.push(row);row=[]}
+      else f+=ch;
+    }
+    if(rows.length<limit&&(f!==''||row.length)){row.push(csvVal(f));rows.push(row)}
+    while(rows.length&&rows[rows.length-1].every(function(x){return x===''}))rows.pop();
+    return rows;
+  }
+
+  /* ---------- 對外介面 ---------- */
+  return {
+    read:async function(buf,filename,limit){
+      if(/\.csv$/i.test(filename))return [{name:'Sheet1',rows:parseCsv(decodeText(buf),limit)}];
+      return readXlsx(buf,limit);
+    }
+  };
+})();
+
+/* ===================================================================
+   電話簿本體
+   =================================================================== */
+var LIMIT=5000;
+var IMPORTED_AT=IMPORTED_AT||0;   /* 資料匯入時間(毫秒);0 代表不明 */
+var $=function(id){return document.getElementById(id)};
+function uniq(a){var s={},o=[];a.forEach(function(v){if(!s[v]){s[v]=1;o.push(v)}});return o}
+function str(v){return v==null?'':String(v).trim()}
+function msg(t,err){var m=$('msg');m.textContent=t||'';m.className='msg'+(err?' err':'');m.hidden=!t}
+/* 交換局的排列順序:預設依筆畫排序。
+   想固定順序時,把名稱依序填進下面的陣列,例如 ['甲交換局','乙交換局'],沒填的會排在後面。 */
+var EXCHANGE_ORDER=[];
+var COLL;try{COLL=new Intl.Collator('zh-Hant-u-co-stroke')}catch(e){COLL=new Intl.Collator()}
+function cmpX(a,b){
+  var i=EXCHANGE_ORDER.indexOf(a),j=EXCHANGE_ORDER.indexOf(b);
+  if(i>=0||j>=0)return i<0?1:j<0?-1:i-j;
+  return COLL.compare(a,b);
+}
+function countBy(rows,i){
+  var n={},keys=[];
+  rows.forEach(function(r){var v=r[i];if(!v)return;if(!n[v]){n[v]=0;keys.push(v)}n[v]++});
+  return {keys:keys,n:n};
+}
+function fillSel(sel,all,keys,n,keep){
+  sel.textContent='';
+  var o=document.createElement('option');o.value='';o.textContent=all;sel.appendChild(o);
+  keys.forEach(function(v){var e=document.createElement('option');e.value=v;e.textContent=v+'('+n[v]+')';sel.appendChild(e)});
+  sel.value=keys.indexOf(keep)>=0?keep:'';
+}
+/* 交換局選單只列出目前所選股別底下的交換局,括號內是筆數 */
+function refreshX(){
+  var g=$('g').value,c=countBy(DATA.filter(function(r){return !g||r[0]===g}),1);
+  fillSel($('x'),'全部交換局',c.keys.sort(cmpX),c.n,$('x').value);
+}
+function showStamp(){
+  var e=$('stamp');
+  if(!DATA.length){e.hidden=true;return}
+  e.hidden=false;
+  if(!IMPORTED_AT){e.textContent='匯入日期不明';return}
+  var d=new Date(IMPORTED_AT),n=new Date(),p=function(x){return x<10?'0'+x:''+x};
+  var days=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+  e.textContent='匯入日期 '+d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+(days>0?'('+days+' 天前)':'(今天)');
+}
+function setData(rows){
+  DATA=rows;$('q').value='';
+  var c=countBy(DATA,0);
+  fillSel($('g'),'全部股別',c.keys,c.n,'');
+  $('x').value='';refreshX();render();showStamp();
+}
+function render(){
+  var g=$('g').value,x=$('x').value,q=$('q').value.trim().toLowerCase();
+  var box=$('list');box.textContent='';
+  function note(t){var d=document.createElement('div');d.className='empty';d.textContent=t;box.appendChild(d)}
+  if(!DATA.length){$('count').textContent='';$('clr').hidden=true;note('尚未匯入資料。請按右上角的「匯入檔案」,選擇 Excel(.xlsx)或 CSV 檔。');return}
+  var rows=DATA.filter(function(r){
+    return (!g||r[0]===g)&&(!x||r[1]===x)&&(!q||(r[2]+' '+r[3]).toLowerCase().indexOf(q)>=0);
+  });
+  $('count').textContent='共 '+rows.length+' 筆'+(rows.length!==DATA.length?'(全部 '+DATA.length+' 筆)':'');
+  $('clr').hidden=!(g||x||q);
+  if(!rows.length){note('找不到符合的資料。請換個關鍵字,或清除篩選。');return}
+  /* 同一個交換局的資料歸在同一組(不管在 Excel 裡散在哪裡) */
+  var keys=[],map={};
+  rows.forEach(function(r){if(!map[r[1]]){map[r[1]]=[];keys.push(r[1])}map[r[1]].push(r)});
+  keys.sort(cmpX).forEach(function(k){
+    var list=map[k],sec=document.createElement('section');sec.className='grp';
+    var h=document.createElement('h2');h.appendChild(document.createTextNode(k));
+    var sp=document.createElement('span');sp.textContent=list.length+' 筆';h.appendChild(sp);sec.appendChild(h);
+    list.forEach(function(r){
+      var row=document.createElement('div');row.className='row';
+      var who=document.createElement('div');who.className='who';
+      var b=document.createElement('b');b.textContent=r[2];who.appendChild(b);
+      if(r[0]){var tg=document.createElement('span');tg.className='tag';tg.textContent=r[0];who.appendChild(tg)}
+      if(r[4]){var s=document.createElement('span');s.textContent=r[4];who.appendChild(s)}
+      row.appendChild(who);
+      var a=document.createElement('a');a.className='call';
+      a.href='tel:'+r[3].replace(/[^\d+#*,]/g,'');
+      a.textContent=r[3];a.setAttribute('aria-label','撥打 '+r[2]+' '+r[3]);
+      row.appendChild(a);
+      sec.appendChild(row);
+    });
+    box.appendChild(sec);
+  });
+}
+
+/* ---------- 加密 / 解密(瀏覽器內建的 Web Crypto,不連網、不用外部程式庫) ----------
+   AES-256-GCM;金鑰由密碼經 PBKDF2-SHA256(20 萬次)產生。
+   檔案內容為一行文字:PBENC1:次數:Base64(鹽16 + IV12 + 密文),用文字編輯器看不到任何明碼。 */
+var PBCrypto=(function(){
+  var ITER=200000,MAGIC='PBENC1';
+  function sub(){
+    var s=window.crypto&&window.crypto.subtle;
+    if(!s)throw new Error('這個環境不支援加密功能(需要較新的瀏覽器)');
+    return s;
+  }
+  function b64(u8){var s='';for(var i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
+  function unb64(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+  async function key(pw,salt,iter,usage){
+    var km=await sub().importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+    return sub().deriveKey({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,[usage]);
+  }
+  return {
+    isEncrypted:function(buf){return new TextDecoder().decode(new Uint8Array(buf,0,Math.min(MAGIC.length,buf.byteLength)))===MAGIC},
+    encrypt:async function(text,pw){
+      var salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+      var k=await key(pw,salt,ITER,'encrypt');
+      var ct=new Uint8Array(await sub().encrypt({name:'AES-GCM',iv:iv},k,new TextEncoder().encode(text)));
+      var all=new Uint8Array(28+ct.length);all.set(salt,0);all.set(iv,16);all.set(ct,28);
+      return MAGIC+':'+ITER+':'+b64(all)+'\r\n';
+    },
+    decrypt:async function(buf,pw){
+      var t=new TextDecoder().decode(new Uint8Array(buf)).trim().split(':');
+      var iter=parseInt(t[1],10);
+      if(t.length!==3||t[0]!==MAGIC||!(iter>=1000&&iter<=5000000))throw new Error('加密檔格式不正確');
+      var all=unb64(t[2]),k=await key(pw,all.subarray(0,16),iter,'decrypt');
+      try{return new TextDecoder().decode(await sub().decrypt({name:'AES-GCM',iv:all.subarray(16,28)},k,all.subarray(28)))}
+      catch(e){var x=new Error('密碼錯誤,或檔案已損毀');x.bad=true;throw x}
+    }
+  };
+})();
+
+/* 密碼輸入視窗(不用 prompt(),因為 Android WebView 預設不會顯示 prompt) */
+function askPassword(title,confirmMode,errText){
+  return new Promise(function(resolve){
+    var ov=$('dlg'),p1=$('pw1'),p2=$('pw2'),er=$('pwerr');
+    $('dlgtitle').textContent=title;p1.value='';p2.value='';er.textContent=errText||'';
+    $('pw2wrap').hidden=!confirmMode;ov.hidden=false;p1.focus();
+    function done(v){ov.hidden=true;$('pwok').onclick=null;$('pwcancel').onclick=null;ov.onkeydown=null;p1.value='';p2.value='';resolve(v)}
+    $('pwcancel').onclick=function(){done(null)};
+    $('pwok').onclick=function(){
+      if(!p1.value){er.textContent='請輸入密碼。';return}
+      if(confirmMode){
+        if(p1.value.length<8){er.textContent='密碼至少 8 個字元。';return}
+        if(p1.value!==p2.value){er.textContent='兩次輸入的密碼不一樣。';return}
+      }
+      done(p1.value);
+    };
+    ov.onkeydown=function(e){if(e.key==='Enter'&&ov.onkeydown)$('pwok').onclick();else if(e.key==='Escape')$('pwcancel').onclick()};
+  });
+}
+/* 匯入前處理:加密檔先要密碼解開,取消則回傳 null */
+async function prepareFile(buf,name){
+  if(!PBCrypto.isEncrypted(buf))return {buf:buf,name:name};
+  var err='';
+  for(;;){
+    var pw=await askPassword('輸入密碼以匯入',false,err);
+    if(pw==null)return null;
+    try{return {buf:new TextEncoder().encode(await PBCrypto.decrypt(buf,pw)).buffer,name:'data.csv'}}
+    catch(e){if(!e.bad)throw e;err='密碼錯誤,請再試一次。'}
+  }
+}
+
+/* ---------- 檔案匯入(Excel .xlsx / CSV) ----------
+   找標題列(前 10 列中有「姓名」的那一列),再依欄名對應:
+   股別、交換局、姓名、電話、工作性質(欄位順序不限)。所有工作表都會讀。
+   股別留白(例如合併儲存格)時沿用上一列;
+   交換局、姓名、電話任何一個是空白的列不會列入(整列全空的不算)。 */
+var COLS=['股別','交換局','姓名','電話','工作性質'];
+function parseBook(sheets){
+  var out=[],used=0,skipped=0;
+  sheets.forEach(function(sh){
+    var rows=sh.rows,hi=-1;
+    for(var i=0;i<Math.min(rows.length,10)&&hi<0;i++){if(rows[i].map(str).indexOf('姓名')>=0)hi=i}
+    if(hi<0)return;
+    var head=rows[hi].map(str),map=COLS.map(function(c){return head.indexOf(c)});
+    var g='',n0=out.length;
+    for(var r=hi+1;r<rows.length;r++){
+      var v=map.map(function(c){return c<0?'':str(rows[r][c])});
+      if(!v.some(Boolean))continue;
+      if(v[0])g=v[0];else v[0]=g;
+      if(!v[1]||!v[2]||!v[3]){skipped++;continue}
+      out.push(v);
+    }
+    if(out.length>n0)used++;
+  });
+  return {rows:out,sheets:used,skipped:skipped};
+}
+$('imp').addEventListener('click',function(){$('file').click()});
+$('file').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    prepareFile(ev.target.result,f.name).then(function(r){return r?LocalReader.read(r.buf,r.name,LIMIT+1):null}).then(function(sheets){
+      if(!sheets)return;
+      var res=parseBook(sheets);
+      if(!res.rows.length){msg('找不到資料。請確認標題列有「姓名」欄(建議欄位:股別、交換局、姓名、電話、工作性質)。',true);return}
+      IMPORTED_AT=Date.now();setData(res.rows);
+      var cut=sheets.some(function(s){return s.rows.length>LIMIT});
+      msg('已匯入 '+res.rows.length+' 筆(來自 '+res.sheets+' 個工作表)。'+(res.skipped?'略過 '+res.skipped+' 列(交換局、姓名或電話有空白)。':'')+(cut?'有工作表超過 '+LIMIT+' 列,超出的部分未匯入。':'')+'資料已儲存在這支手機,下次開啟會自動載入。');
+      saveData();
+    }).catch(function(err){console.error(err);msg('讀取失敗:'+(err&&err.message?err.message:String(err)),true)});
+  };
+  rd.onerror=function(){msg('讀取失敗。',true)};
+  rd.readAsArrayBuffer(f);
+  e.target.value='';
+});
+
+/* ---------- 資料存在這支手機(App 自己的儲存空間) ---------- */
+var STORE_KEY='phonebook.data.v1';
+function saveData(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify({t:IMPORTED_AT,rows:DATA}))}
+  catch(e){msg('資料無法儲存在這支手機,關閉 App 後需要重新匯入。',true)}
+}
+function loadSaved(){
+  try{
+    var o=JSON.parse(localStorage.getItem(STORE_KEY)||'null'),a=Array.isArray(o)?o:(o&&o.rows);
+    if(Array.isArray(a)){IMPORTED_AT=(o&&+o.t)||0;return a.filter(function(r){return Array.isArray(r)&&r.length>=5})}
+  }catch(e){}
+  return [];
+}
+
+$('g').addEventListener('change',function(){$('x').value='';refreshX();render()});  /* 換股別(含「全部股別」)時,交換局一併回到「全部」 */
+$('x').addEventListener('change',render);
+$('q').addEventListener('input',render);
+$('clr').addEventListener('click',function(){$('g').value='';$('q').value='';refreshX();$('x').value='';render()});
+setData(loadSaved());
+</script>
+</body>
+</html>
