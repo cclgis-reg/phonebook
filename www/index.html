@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="theme-color" content="#dfe8f7">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>查修人員通訊錄</title>
 <style>
@@ -11,12 +12,7 @@
   --call:#0f7a55;--call-bg:#dff3ea;--tag-bg:#e3ebfc;--err:#b3261e;--shadow:0 2px 8px rgba(40,70,140,.10);
   --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei","微軟正黑體",system-ui,sans-serif;
   --ic-phone:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='white'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M22%2016.92v3a2%202%200%200%201-2.18%202%2019.79%2019.79%200%200%201-8.63-3.07%2019.5%2019.5%200%200%201-6-6%2019.79%2019.79%200%200%201-3.07-8.67A2%202%200%200%201%204.11%202h3a2%202%200%200%201%202%201.72c.127.96.361%201.903.7%202.81a2%202%200%200%201-.45%202.11L8.09%209.91a16%2016%200%200%200%206%206l1.27-1.27a2%202%200%200%201%202.11-.45c.907.339%201.85.573%202.81.7A2%202%200%200%201%2022%2016.92z'/%3E%3C/svg%3E");--ic-pin:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='white'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M21%2010c0%207-9%2013-9%2013s-9-6-9-13a9%209%200%200%201%2018%200z'/%3E%3Ccircle%20cx='12'%20cy='10'%20r='3'/%3E%3C/svg%3E");--ic-call:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%230f7a55'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M22%2016.92v3a2%202%200%200%201-2.18%202%2019.79%2019.79%200%200%201-8.63-3.07%2019.5%2019.5%200%200%201-6-6%2019.79%2019.79%200%200%201-3.07-8.67A2%202%200%200%201%204.11%202h3a2%202%200%200%201%202%201.72c.127.96.361%201.903.7%202.81a2%202%200%200%201-.45%202.11L8.09%209.91a16%2016%200%200%200%206%206l1.27-1.27a2%202%200%200%201%202.11-.45c.907.339%201.85.573%202.81.7A2%202%200%200%201%2022%2016.92z'/%3E%3C/svg%3E");
-  color-scheme:light dark;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg1:#0e1522;--bg2:#0b111b;--panel:#151f31;--surface:#1a2538;--ink:#e8edf6;--muted:#95a4bd;--line:#2a3750;
-    --field-line:#3b5183;--accent:#8db4ff;--on-accent:#fff;--call:#6fd9a8;--call-bg:#173a2e;--tag-bg:#22314f;--err:#ff9b94;
-    --shadow:0 2px 8px rgba(0,0,0,.35);--ic-call:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%236fd9a8'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M22%2016.92v3a2%202%200%200%201-2.18%202%2019.79%2019.79%200%200%201-8.63-3.07%2019.5%2019.5%200%200%201-6-6%2019.79%2019.79%200%200%201-3.07-8.67A2%202%200%200%201%204.11%202h3a2%202%200%200%201%202%201.72c.127.96.361%201.903.7%202.81a2%202%200%200%201-.45%202.11L8.09%209.91a16%2016%200%200%200%206%206l1.27-1.27a2%202%200%200%201%202.11-.45c.907.339%201.85.573%202.81.7A2%202%200%200%201%2022%2016.92z'/%3E%3C/svg%3E")}
+  color-scheme:light;
 }
 *{box-sizing:border-box;margin:0}
 [hidden]{display:none!important}
@@ -25,19 +21,20 @@ body{font-family:var(--font);background:linear-gradient(180deg,var(--bg1),var(--
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .bar{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);border-radius:0 0 22px 22px;
-  box-shadow:0 8px 22px rgba(40,70,140,.14);padding:calc(14px + env(safe-area-inset-top,0px)) 16px 12px}
+  box-shadow:0 8px 22px rgba(40,70,140,.14);padding:calc(12px + env(safe-area-inset-top,0px)) 16px 8px}
 .bar-in{max-width:720px;margin:0 auto}
-.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;
-  padding-bottom:10px;border-bottom:1px solid var(--line)}
-h1{display:flex;align-items:center;gap:10px;font-size:1.2rem;font-weight:800;letter-spacing:.04em;color:var(--ink)}
+.top{display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--line)}
+h1{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto;font-size:1.2rem;font-weight:800;letter-spacing:.04em;color:var(--ink)}
 h1::before{content:"";flex:none;width:34px;height:34px;border-radius:10px;
-  background:var(--ic-phone) center/56% no-repeat,var(--grad);box-shadow:0 3px 8px rgba(47,95,214,.35)}
-.btns{display:flex;flex-wrap:wrap;gap:8px}
-.btn{font:inherit;font-size:.92rem;font-weight:700;min-height:42px;padding:0 18px;border-radius:12px;border:0;
+  background:var(--ic-phone) center/56% no-repeat,var(--grad);box-shadow:0 3px 8px rgba(47,95,214,.30)}
+.btns{display:flex;flex:none;gap:8px}
+h1 span{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.btn{font:inherit;font-size:.92rem;font-weight:700;min-height:40px;padding:0 14px;white-space:nowrap;border-radius:12px;border:0;
   background:var(--grad);color:var(--on-accent);cursor:pointer;box-shadow:0 3px 10px rgba(47,95,214,.30)}
 .btn:active{filter:brightness(.92)}
 .btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--field-line);box-shadow:none}
-.msg{font-size:.85rem;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:var(--surface);
+.msg{font-size:.85rem;color:var(--muted);margin-bottom:8px;padding:7px 12px;background:var(--surface);
   border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px}
 .msg.err{color:var(--err);border-left-color:var(--err)}
 .sel{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-bottom:8px}
@@ -47,8 +44,10 @@ select:focus,input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 select{-webkit-appearance:none;appearance:none;padding-right:34px;
   background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%);
   background-position:calc(100% - 19px) 50%,calc(100% - 14px) 50%;background-size:5px 5px;background-repeat:no-repeat}
-.meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.85rem;color:var(--muted);min-height:28px}
-.clear{font:inherit;font-size:.85rem;font-weight:700;color:var(--accent);background:none;border:0;padding:4px 0 4px 12px;cursor:pointer}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:.82rem;color:var(--muted);min-height:26px}
+.info{min-width:0}
+.info .stamp:not([hidden])::before{content:"·";margin:0 6px}
+.clear{white-space:nowrap;flex:none;font:inherit;font-size:.85rem;font-weight:700;color:var(--accent);background:none;border:0;padding:4px 0 4px 12px;cursor:pointer}
 
 main{max-width:720px;margin:0 auto;padding:6px 16px calc(40px + env(safe-area-inset-bottom,0px))}
 .grp h2{display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:800;color:var(--ink);padding:18px 2px 10px}
@@ -67,7 +66,8 @@ main{max-width:720px;margin:0 auto;padding:6px 16px calc(40px + env(safe-area-in
 .call:active{filter:brightness(.92)}
 .empty{margin-top:18px;padding:44px 12px;text-align:center;color:var(--muted);background:var(--surface);
   border:1.5px dashed var(--field-line);border-radius:16px}
-.stamp{font-size:.78rem;color:var(--muted);margin-top:4px;margin-left:44px}
+.stamp{font-size:.82rem;color:var(--muted)}
+@media (max-width:360px){h1{font-size:1.05rem;gap:8px}h1::before{width:28px;height:28px;border-radius:9px}.btn{font-size:.85rem;padding:0 11px}.bar{padding-left:12px;padding-right:12px}main{padding-left:12px;padding-right:12px}}
 .dlg{position:fixed;inset:0;z-index:20;background:rgba(10,20,40,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .dlg .box{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 12px 36px rgba(0,0,0,.3)}
 .dlg h2{font-size:1.05rem;font-weight:800;margin-bottom:12px}
@@ -79,7 +79,7 @@ main{max-width:720px;margin:0 auto;padding:6px 16px calc(40px + env(safe-area-in
 <body>
 <header class="bar"><div class="bar-in">
   <div class="top">
-    <div><h1>查修人員通訊錄</h1><div class="stamp" id="stamp" hidden></div></div>
+    <h1><span>查修人員通訊錄</span></h1>
     <div class="btns">
       <button class="btn" id="imp">匯入檔案</button>
     </div>
@@ -91,7 +91,7 @@ main{max-width:720px;margin:0 auto;padding:6px 16px calc(40px + env(safe-area-in
     <select id="x" aria-label="交換局"></select>
   </div>
   <input id="q" type="search" placeholder="輸入姓名關鍵字(也可搜電話)" aria-label="姓名關鍵字" autocomplete="off" enterkeyhint="search">
-  <div class="meta"><span id="count"></span><button class="clear" id="clr" hidden>清除篩選</button></div>
+  <div class="meta"><span class="info"><span id="count"></span><span class="stamp" id="stamp" hidden></span></span><button class="clear" id="clr" hidden>清除篩選</button></div>
 </div></header>
 <main id="list"></main>
 
@@ -346,10 +346,10 @@ function showStamp(){
   var e=$('stamp');
   if(!DATA.length){e.hidden=true;return}
   e.hidden=false;
-  if(!IMPORTED_AT){e.textContent='匯入日期不明';return}
+  if(!IMPORTED_AT){e.textContent='資料更新日期不明';return}
   var d=new Date(IMPORTED_AT),n=new Date(),p=function(x){return x<10?'0'+x:''+x};
   var days=Math.round((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
-  e.textContent='匯入日期 '+d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+(days>0?'('+days+' 天前)':'(今天)');
+  e.textContent='資料更新 '+(d.getFullYear()!==n.getFullYear()?d.getFullYear()+'/':'')+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+(days>0?'('+days+' 天前)':'(今天)');
 }
 function setData(rows){
   DATA=rows;$('q').value='';
